@@ -31,6 +31,7 @@ Conversion of 'Pandoc' format into ConTeXt.
 module Text.Pandoc.Writers.ConTeXt ( writeConTeXt ) where
 import Text.Pandoc.Definition
 import Text.Pandoc.Shared
+import Text.Pandoc.Generic (queryWith)
 import Text.Printf ( printf )
 import Data.List ( intercalate )
 import Control.Monad.State
@@ -213,8 +214,8 @@ defListItemToConTeXt :: ([Inline], [[Block]]) -> State WriterState Doc
 defListItemToConTeXt (term, defs) = do
   term' <- inlineListToConTeXt term
   def'  <- liftM vsep $ mapM blockListToConTeXt defs
-  return $ "\\startdescr" <> braces term' $$ nest 2 def' $$
-           "\\stopdescr" <> blankline
+  return $ "\\startdescription" <> braces term' $$ nest 2 def' $$
+           "\\stopdescription" <> blankline
 
 -- | Convert list of block elements to ConTeXt.
 blockListToConTeXt :: [Block] -> State WriterState Doc
@@ -279,7 +280,8 @@ inlineToConTeXt (Link txt (src, _)) = do
   put $ st {stNextRef = next + 1}
   let ref = show next
   label <- inlineListToConTeXt txt
-  return $ "\\useURL" <> brackets (text ref) <> brackets (text src) <>
+  return $ "\\useURL" <> brackets (text ref) <>
+           brackets (text $ escapeStringUsing [('#',"\\#")] src) <>
            brackets empty <> brackets label <>
            "\\from" <> brackets (text ref)
 inlineToConTeXt (Image _ (src, _)) = do
@@ -289,5 +291,10 @@ inlineToConTeXt (Image _ (src, _)) = do
   return $ braces $ "\\externalfigure" <> brackets (text src')
 inlineToConTeXt (Note contents) = do
   contents' <- blockListToConTeXt contents
-  return $ text "\\footnote{" <>
-           nest 2 contents' <> char '}'
+  let codeBlock x@(CodeBlock _ _) = [x]
+      codeBlock _ = []
+  let codeBlocks = queryWith codeBlock contents
+  return $ if null codeBlocks
+              then text "\\footnote{" <> nest 2 contents' <> char '}'
+              else text "\\startbuffer " <> nest 2 contents' <>
+                   text "\\stopbuffer\\footnote{\\getbuffer}"
