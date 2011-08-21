@@ -40,6 +40,7 @@ import Control.Monad.State
 
 data WriterState = WriterState {
     stNotes     :: [String]        -- Footnotes
+  , stTables    :: [String]        -- Table IDs
 --  , stListLevel :: [Char]          -- String at beginning of list items, e.g. "**"
 --  , stUseTags   :: Bool            -- True if we should use HTML tags because we're in a complex list
   }
@@ -48,7 +49,7 @@ data WriterState = WriterState {
 writeReview :: WriterOptions -> Pandoc -> String
 writeReview opts document =
   evalState (pandocToReview opts document)
-            (WriterState { stNotes = [] })
+            (WriterState { stNotes = [], stTables = [] })
 
 -- | Return Review representation of document.
 pandocToReview :: WriterOptions -> Pandoc -> State WriterState String
@@ -135,6 +136,8 @@ blockToReview opts (BlockQuote blocks) = do
   return $ "//quote{\n" ++ contents ++ "\n//}\n"
 
 blockToReview opts (Table capt aligns widths headers rows') = do
+  curTables <- liftM stTables get
+  let newnum = length curTables + 1
   let alignStrings = map alignmentToString aligns
   captionDoc <- if null capt
                    then return "[]"
@@ -151,7 +154,9 @@ blockToReview opts (Table capt aligns widths headers rows') = do
                  hs <- tableRowToReview opts alignStrings 0 headers
                  return $ hs ++ "\n--------------------\n"
   body' <- zipWithM (tableRowToReview opts alignStrings) [1..] rows'
-  return $ coltags ++ "//table[]" ++ captionDoc ++ "{\n" ++ head' ++ unlines body' ++ "//}\n"
+  let thistable = "tbl" ++ show newnum
+  modify $ \s -> s { stTables = thistable : curTables }
+  return $ coltags ++ "//table[" ++ thistable ++ "]" ++ captionDoc ++ "{\n" ++ head' ++ unlines body' ++ "//}\n"
 
 blockToReview opts (BulletList items) = do
   contents <- mapM (bulletListItemToReview opts) items
