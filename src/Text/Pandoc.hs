@@ -135,6 +135,7 @@ import Text.Pandoc.Writers.RTF
 import Text.Pandoc.Writers.MediaWiki
 import Text.Pandoc.Writers.Textile
 import Text.Pandoc.Writers.Org
+import Text.Pandoc.Writers.Review
 import Text.Pandoc.Templates
 import Text.Pandoc.Parsing
 import Text.Pandoc.Shared
@@ -192,6 +193,7 @@ writers = [("native"       , writeNative)
           ,("textile"      , writeTextile)
           ,("rtf"          , writeRTF)
           ,("org"          , writeOrg)
+          ,("review"          , writeReview)
           ]
 
 -- | Converts a transformation on the Pandoc AST into a function
