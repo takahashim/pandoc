@@ -257,7 +257,7 @@ inlineListToReview opts lst =
   mapM (inlineToReview opts) lst >>= return . concat
 
 inlineMarkup :: String -> String -> String
-inlineMarkup command contents = "@<" ++ command ++ ">{" ++ contents ++ "}"
+inlineMarkup command contents = "@<" ++ command ++ ">{" ++ (escapeInlineString contents) ++ "}"
 
 -- | Convert Pandoc inline element to Review.
 inlineToReview :: WriterOptions -> Inline -> State WriterState String
@@ -268,19 +268,19 @@ inlineToReview opts (Emph lst) = do
 
 inlineToReview opts (Strong lst) = do
   contents <- inlineListToReview opts lst
-  return $ "@<strong>{" ++ contents ++ "}"
+  return $ inlineMarkup "strong" contents
 
 inlineToReview opts (Strikeout lst) = do
   contents <- inlineListToReview opts lst
-  return $ "@<del>{" ++ contents ++ "}"
+  return $ inlineMarkup "del" contents
 
 inlineToReview opts (Superscript lst) = do
   contents <- inlineListToReview opts lst
-  return $ "@<sup>{" ++ contents ++ "}"
+  return $ inlineMarkup "sup" contents
 
 inlineToReview opts (Subscript lst) = do
   contents <- inlineListToReview opts lst
-  return $ "@<sub>{" ++ contents ++ "}"
+  return $ inlineMarkup "sub" contents
 
 inlineToReview opts (SmallCaps lst) = inlineListToReview opts lst
 
@@ -294,7 +294,7 @@ inlineToReview opts (Quoted DoubleQuote lst) = do
 
 inlineToReview opts (Cite _  lst) = do
   contents <- inlineListToReview opts lst
-  return $ "@<cite>{" ++ contents ++ "}"
+  return $ inlineMarkup "cite" contents
 
 inlineToReview _ EmDash = return " -- "
 
@@ -305,19 +305,19 @@ inlineToReview _ Apostrophe = return "'"
 inlineToReview _ Ellipses = return "..."
 
 inlineToReview _ (Code _ str) =
-  return $ "@<tt>{" ++ escapeInlineString(str) ++ "}"
+  return $ inlineMarkup "tt" str
 
 inlineToReview _ (Str str) = return $ escapeStringForReview str
 
 inlineToReview _ (Math _ str) =
-  return $ "@<m>{" ++ escapeStringForReview str ++ "}"
+  return $ inlineMarkup "m" str
 
 inlineToReview _ (RawInline f str) =
   if f == "review"
      then return str
      else return ""
 
-inlineToReview _ (LineBreak) = return "@<br>{}\n"
+inlineToReview _ (LineBreak) = return $ (inlineMarkup "br" "") ++ "\n"
 
 inlineToReview _ Space = return " "
 
@@ -336,5 +336,5 @@ inlineToReview opts (Note contents) = do
   contents' <- blockListToReview opts contents
   let thisnote = "//footnote[fn" ++ show newnum ++ "][" ++ contents' ++ "]\n"
   modify $ \s -> s { stNotes = thisnote : curNotes }
-  return $ "@<fn>{fn" ++ show newnum ++ "}"
+  return $ inlineMarkup "fn" ("fn" ++ show newnum)
   -- note - may not work for notes with multiple blocks
