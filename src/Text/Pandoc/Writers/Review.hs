@@ -31,12 +31,12 @@ ReVIEW:  <http://github.com/kmuto/review>
 -}
 module Text.Pandoc.Writers.Review ( writeReview ) where
 import Text.Pandoc.Definition
-import Text.Pandoc.Shared 
+import Text.Pandoc.Shared
 import Text.Pandoc.Templates (renderTemplate)
 -- import Text.Pandoc.XML ( escapeStringForXML )
 import Data.List ( intercalate )
 import Control.Monad.State
--- import Data.Char ( isSpace )
+
 
 data WriterState = WriterState {
     stNotes     :: [String]        -- Footnotes
@@ -46,9 +46,9 @@ data WriterState = WriterState {
 
 -- | Convert Pandoc to Review.
 writeReview :: WriterOptions -> Pandoc -> String
-writeReview opts document = 
-  evalState (pandocToReview opts document) 
-            (WriterState { stNotes = [] }) 
+writeReview opts document =
+  evalState (pandocToReview opts document)
+            (WriterState { stNotes = [] })
 
 -- | Return Review representation of document.
 pandocToReview :: WriterOptions -> Pandoc -> State WriterState String
@@ -75,27 +75,28 @@ escapeCharForReview x = case x of
 --                         '|'    -> "&#124;"
                          c      -> [c]
 
+-- | Escape string as needed for Review.
+escapeStringForReview :: String -> String
+escapeStringForReview = concatMap escapeCharForReview
+
 -- | Escape one character as needed for Review.
 escapeInlineChar :: Char -> String
 escapeInlineChar x = case x of
   '}'    -> "\\}"
   c      -> [c]
 
+-- | Escape string in inline-contents for Review.
 escapeInlineString :: String -> String
 escapeInlineString = concatMap escapeInlineChar
 
--- | Escape string as needed for Review.
-escapeStringForReview :: String -> String
-escapeStringForReview = concatMap escapeCharForReview
-
--- | Convert Pandoc block element to Review. 
+-- | Convert Pandoc block element to Review.
 blockToReview :: WriterOptions -- ^ Options
                 -> Block         -- ^ Block element
-                -> State WriterState String 
+                -> State WriterState String
 
 blockToReview _ Null = return ""
 
-blockToReview opts (Plain inlines) = 
+blockToReview opts (Plain inlines) =
   inlineListToReview opts inlines
 
 blockToReview opts (Para [Image txt (src,tit)]) = do
@@ -194,7 +195,7 @@ orderedListItemToReview opts items = do
 
 -- | Convert definition list item (label, list of blocks) to Review.
 definitionListItemToReview :: WriterOptions
-                             -> ([Inline],[[Block]]) 
+                             -> ([Inline],[[Block]])
                              -> State WriterState String
 definitionListItemToReview opts (label, items) = do
   labelText <- inlineListToReview opts label
@@ -220,8 +221,8 @@ tableRowToReview opts alignStrings rownum cols' = do
                       0                  -> "header"
                       x | x `rem` 2 == 1 -> "odd"
                       _                  -> "even"
-  cols'' <- sequence $ zipWith 
-            (\alignment item -> tableItemToReview opts celltype alignment item) 
+  cols'' <- sequence $ zipWith
+            (\alignment item -> tableItemToReview opts celltype alignment item)
             alignStrings cols'
   return $ "<tr class=\"" ++ rowclass ++ "\">\n" ++ unlines cols'' ++ "</tr>"
 
@@ -246,7 +247,7 @@ tableItemToReview opts celltype align' item = do
 -- | Convert list of Pandoc block elements to Review.
 blockListToReview :: WriterOptions -- ^ Options
                     -> [Block]       -- ^ List of block elements
-                    -> State WriterState String 
+                    -> State WriterState String
 blockListToReview opts blocks =
   mapM (blockToReview opts) blocks >>= return . vcat
 
