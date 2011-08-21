@@ -134,36 +134,24 @@ blockToReview opts (BlockQuote blocks) = do
   contents <- blockListToReview opts blocks
   return $ "//quote{\n" ++ contents ++ "\n//}\n"
 
-blockToReview opts (Table [] aligns widths headers rows') |
-         all (==0) widths && all (`elem` [AlignLeft,AlignDefault]) aligns = do
-  hs <- mapM (liftM (("_. " ++) . stripTrailingNewlines) . blockListToReview opts) headers
-  let cellsToRow cells = "|" ++ intercalate "|" cells ++ "|"
-  let header = if all null headers then "" else cellsToRow hs
-  let rowToCells = mapM (liftM stripTrailingNewlines . blockListToReview opts)
-  bs <- mapM rowToCells rows'
-  let body = unlines $ map cellsToRow bs
-  return $ header ++ "\n" ++ body ++ "\n"
-
 blockToReview opts (Table capt aligns widths headers rows') = do
   let alignStrings = map alignmentToString aligns
   captionDoc <- if null capt
-                   then return ""
+                   then return "[]"
                    else do
                       c <- inlineListToReview opts capt
-                      return $ "<caption>" ++ c ++ "</caption>\n"
-  let percent w = show (truncate (100*w) :: Integer) ++ "%"
+                      return $ "[" ++ c ++ "]"
+  let percent w = show (truncate (100*w) :: Integer)
   let coltags = if all (== 0.0) widths
                    then ""
-                   else unlines $ map
-                         (\w -> "<col width=\"" ++ percent w ++ "\" />") widths
+                   else "//tsize[" ++ intercalate "," (map percent widths) ++ "]\n"
   head' <- if all null headers
               then return ""
               else do
                  hs <- tableRowToReview opts alignStrings 0 headers
-                 return $ "<thead>\n" ++ hs ++ "\n</thead>\n"
+                 return $ hs ++ "\n--------------------\n"
   body' <- zipWithM (tableRowToReview opts alignStrings) [1..] rows'
-  return $ "<table>\n" ++ captionDoc ++ coltags ++ head' ++
-            "<tbody>\n" ++ unlines body' ++ "</tbody>\n</table>\n"
+  return $ coltags ++ "//table[]" ++ captionDoc ++ "{\n" ++ head' ++ unlines body' ++ "//}\n"
 
 blockToReview opts (BulletList items) = do
   contents <- mapM (bulletListItemToReview opts) items
@@ -217,14 +205,10 @@ tableRowToReview :: WriterOptions
                     -> State WriterState String
 tableRowToReview opts alignStrings rownum cols' = do
   let celltype = if rownum == 0 then "th" else "td"
-  let rowclass = case rownum of
-                      0                  -> "header"
-                      x | x `rem` 2 == 1 -> "odd"
-                      _                  -> "even"
   cols'' <- sequence $ zipWith
             (\alignment item -> tableItemToReview opts celltype alignment item)
             alignStrings cols'
-  return $ "<tr class=\"" ++ rowclass ++ "\">\n" ++ unlines cols'' ++ "</tr>"
+  return $ intercalate "\t" cols''
 
 alignmentToString :: Alignment -> [Char]
 alignmentToString alignment = case alignment of
@@ -238,9 +222,8 @@ tableItemToReview :: WriterOptions
                      -> String
                      -> [Block]
                      -> State WriterState String
-tableItemToReview opts celltype align' item = do
-  let mkcell x = "<" ++ celltype ++ " align=\"" ++ align' ++ "\">" ++
-                    x ++ "</" ++ celltype ++ ">"
+tableItemToReview opts _ _ item = do
+  let mkcell x = if x == "" then "." else x
   contents <- blockListToReview opts item
   return $ mkcell contents
 
