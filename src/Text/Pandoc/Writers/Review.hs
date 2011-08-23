@@ -313,7 +313,10 @@ inlineToReview opts (Link txt (src, _)) = do
   label <- case txt of
                 [Code _ s]  -> return s
                 _           -> inlineListToReview opts txt
-  return $ inlineMarkup "href" $ src ++ "," ++ label
+  let contents = if src == label
+                then src
+                else src ++ "," ++ label
+  return $ inlineMarkup "href" contents
 
 inlineToReview _ (Image _ (source, tit)) = do
   return $ "//image[" ++ source ++ "][" ++ tit ++ "]{\n//}\n"
