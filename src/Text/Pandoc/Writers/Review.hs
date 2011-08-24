@@ -103,11 +103,11 @@ blockToReview opts (Plain inlines) =
 blockToReview opts (Para [Image txt (src,tit)]) = do
   capt <- blockToReview opts (Para txt)
   im <- inlineToReview opts (Image txt (src,tit))
-  return $ im ++ "\n" ++ capt
+  return $ im ++ "\n" ++ capt ++ "\n"
 
 blockToReview opts (Para inlines) = do
   contents <- inlineListToReview opts inlines
-  return $ contents
+  return $ contents ++ "\n"
 
 blockToReview _ (RawBlock f str) =
   if f == "review"
@@ -119,7 +119,7 @@ blockToReview _ HorizontalRule = return "//hr\n"
 blockToReview opts (Header level inlines) = do
   contents <- inlineListToReview opts inlines
   let prefix = replicate level '='
-  return $ prefix ++ " " ++ contents ++ "\n"
+  return $ "\n" ++ prefix ++ " " ++ contents ++ "\n"
 
 blockToReview _ (CodeBlock (_,_,_) str) =
   return $ "//emlist{\n" ++ str ++ "\n//}\n"
@@ -168,7 +168,7 @@ blockToReview opts (OrderedList _ items) = do
 
 blockToReview opts (DefinitionList items) = do
   contents <- mapM (definitionListItemToReview opts) items
-  return $ vcat contents
+  return $ vcat contents ++ "\n"
 
 -- Auxiliary functions for lists:
 
@@ -194,7 +194,7 @@ definitionListItemToReview opts (label, items) = do
   labelText <- inlineListToReview opts label
   contents <- mapM (blockListToReview opts) items
   return $ ": " ++ labelText ++ "\n" ++
-          "\t" ++ (intercalate "\n\t" contents)
+          "\t" ++ (intercalate "\n\t" contents) ++ "\n"
 
 -- | Concatenates strings with line breaks between them.
 vcat :: [String] -> String
